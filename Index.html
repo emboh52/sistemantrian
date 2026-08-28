@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1f2833, #0b0c10);
+      color: #fff;
+      margin: 0; padding: 20px;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh;
+    }
+    .hub-container {
+      width: 100%; max-width: 480px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 35px; border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    h1 { color: #66fcf1; margin-bottom: 5px; font-size: 24px; letter-spacing: 2px; }
+    p { color: #c5c6c7; font-size: 14px; margin-bottom: 30px; }
+    
+    .menu-btn {
+      display: block; width: 100%;
+      padding: 16px; margin: 15px 0;
+      font-size: 16px; font-weight: bold;
+      text-decoration: none; border-radius: 12px;
+      transition: 0.3s; box-sizing: border-box;
+      text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      cursor: pointer; border: none;
+    }
+    .btn-register { background-color: #00b894; color: white; }
+    .btn-register:hover { background-color: #55efc4; color: #2d3436; }
+    
+    .btn-display { background-color: #0984e3; color: white; }
+    .btn-display:hover { background-color: #74b9ff; color: #2d3436; }
+    
+    .btn-dashboard { background-color: #fdcb6e; color: #2d3436; }
+    .btn-dashboard:hover { background-color: #ffeaa7; }
+    
+    .btn-admin-small {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 25px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #66fcf1;
+      background: transparent;
+      border: 1px solid #66fcf1;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn-admin-small:hover {
+      background: #66fcf1;
+      color: #0b0c10;
+      box-shadow: 0 5px 15px rgba(102, 252, 241, 0.4);
+    }
+    
+    .footer { margin-top: 30px; font-size: 12px; color: #8c8c8c; }
+  </style>
+</head>
+<body>
+
+  <div class="hub-container">
+    <h1>QAntri</h1>
+    <p>Antrean Digital untuk UMKM</p>
+    
+    <p id="status-text" style="color: #66fcf1; font-weight: bold; font-size: 12px; margin-bottom: 20px;">
+      ⏳ Memuat sistem...
+    </p>
+    
+    <button class="menu-btn btn-register" onclick="openPage('register')">📝 Halaman Ambil Antrean (Pelanggan)</button>
+    <button class="menu-btn btn-display" onclick="openPage('display')">📺 Halaman Display TV (Ruang Tunggu)</button>
+    <button class="menu-btn btn-dashboard" onclick="openPage('dashboard')">👨‍💻 Dashboard Petugas / Kasir</button>
+    <button class="btn-admin-small" onclick="openPage('analytics')">🔐 Login Admin</button>
+   
+    <div class="footer">UMKM Digital Solution &bull; Vibe Coding Project</div>
+  </div>
+
+  <script>
+    var globalBaseUrl = "";
+
+    window.onload = function() {
+      var buttons = document.querySelectorAll('button');
+      buttons.forEach(function(btn) { btn.disabled = true; btn.style.opacity = '0.5'; });
+
+      var parentUrl = document.referrer; 
+      
+      if (parentUrl && parentUrl.includes('script.google.com')) {
+        globalBaseUrl = parentUrl.split('?')[0]; 
+        readyToGo();
+      } else {
+        google.script.run.withSuccessHandler(function(url) {
+          globalBaseUrl = url;
+          readyToGo();
+        }).getScriptUrl();
+      }
+    };
+
+    function readyToGo() {
+      document.getElementById('status-text').style.display = 'none';
+      var buttons = document.querySelectorAll('button');
+      buttons.forEach(function(btn) { btn.disabled = false; btn.style.opacity = '1'; });
+    }
+
+    // DIUBAH DISINI: Menggunakan window.open agar terbuka di TAB BARU
+    function openPage(pageName) {
+      if (!globalBaseUrl) {
+        alert("Sistem masih memuat, silakan tunggu sebentar!");
+        return;
+      }
+      window.open(globalBaseUrl + "?page=" + pageName, '_blank');
+    }
+  </script>
+</body>
+</html>

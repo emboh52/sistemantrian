@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV Display Antrean</title>
+  <style>
+    /* RESET & LAYOUT UTAMA */
+    body { 
+      margin: 0; padding: 0; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background-color: #99b3cc; 
+      display: flex; flex-direction: column; 
+      height: 100vh; overflow: hidden;
+    }
+
+    /* HEADER */
+    .header { 
+      display: flex; justify-content: space-between; align-items: center;
+      background-color: #007bff; color: white; padding: 15px 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header-left h1 { margin: 0; font-size: 28px; letter-spacing: 1px; }
+    .header-left p { margin: 5px 0 0 0; font-size: 14px; color: #d0e8ff; }
+    .header-right { text-align: right; }
+    .date-text { font-size: 16px; color: #d0e8ff; margin-bottom: 5px; }
+    .time-text { font-size: 36px; font-weight: bold; line-height: 1; }
+
+    /* KONTEN UTAMA (Tengah) */
+    .main-content { 
+      flex: 1; display: flex; flex-direction: column; padding: 15px; gap: 15px;
+    }
+    
+    .top-row { display: flex; flex: 2; gap: 15px; }
+    
+    .big-call-box { 
+      flex: 1; display: flex; flex-direction: column; 
+      background-color: #3b82f6; color: white; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    }
+    .box-header { background: rgba(0,0,0,0.15); text-align: center; padding: 20px; font-size: 24px; font-weight: bold; }
+    .box-number { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 160px; font-weight: bold; line-height: 1; }
+    .box-footer { background: rgba(0,0,0,0.15); text-align: center; padding: 20px; font-size: 28px; font-weight: bold; }
+
+    .video-box { 
+      flex: 2; background-color: #000; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    }
+    .video-box iframe { width: 100%; height: 100%; border: none; }
+
+    .bottom-row { 
+      flex: 1; display: flex; gap: 15px; 
+    }
+    .counter-card { 
+      flex: 1; display: flex; flex-direction: column; 
+      border-radius: 12px; overflow: hidden; color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .card-header { background: rgba(0,0,0,0.15); text-align: center; padding: 15px; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+    .card-number { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 70px; font-weight: bold; }
+
+    .footer-ticker {
+      background-color: #007bff; color: white; padding: 12px 20px; font-size: 22px; font-weight: bold;
+    }
+
+    .flash { animation: blinking 0.8s infinite; color: #ffeb3b !important; }
+    @keyframes blinking { 50% { opacity: 0; } }
+  </style>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-left">
+      <h1 id="namaInstansi">NAMA TOKO / INSTANSI ANDA</h1>
+    </div>
+    <div class="header-right">
+      <div class="date-text" id="currentDate">Memuat Tanggal...</div>
+      <div class="time-text" id="currentTime">--:--:--</div>
+    </div>
+  </header>
+  
+  <div class="main-content">
+    <div class="top-row">
+      <div class="big-call-box">
+        <div class="box-header">NOMOR ANTREAN</div>
+        <div class="box-number" id="tvNumber">---</div>
+        <div class="box-footer" id="tvCounter">MENUNGGU PANGGILAN</div>
+      </div>
+      
+      <div class="video-box">
+        <iframe id="videoPlayer" src="https://www.youtube.com/embed/aqz-KE-bpKQ?autoplay=1&mute=1&loop=1&playlist=aqz-KE-bpKQ" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+
+    <div class="bottom-row" id="bottomRowCards"></div>
+  </div>
+
+  <div class="footer-ticker">
+    <marquee id="teksTicker" scrollamount="8">JAM BUKA LAYANAN KAMI ADALAH PUKUL 08.00 s.d 16.00...</marquee>
+  </div>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('currentDate').innerText = now.toLocaleDateString('id-ID', options);
+      document.getElementById('currentTime').innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
+      authDomain: "qantri-app.firebaseapp.com",
+      databaseURL: "https://qantri-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "qantri-app",
+      storageBucket: "qantri-app.firebasestorage.app",
+      messagingSenderId: "687819838654",
+      appId: "1:687819838654:web:6a56ebb0d43ecf1fa4baef"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+
+    let lastCalledTime = 0;
+
+    function formatSpelling(queueNumber) {
+      return queueNumber.split('').map(char => char === '0' ? 'nol' : char).join(', ');
+    }
+
+    function playChime() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine'; osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
+        gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc1.connect(gain1); gain1.connect(audioCtx.destination);
+        osc1.start(); osc1.stop(audioCtx.currentTime + 0.5);
+
+        setTimeout(() => {
+          const osc2 = audioCtx.createOscillator();
+          const gain2 = audioCtx.createGain();
+          osc2.type = 'sine'; osc2.frequency.setValueAtTime(440, audioCtx.currentTime);
+          gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+          osc2.connect(gain2); gain2.connect(audioCtx.destination);
+          osc2.start(); osc2.stop(audioCtx.currentTime + 0.8);
+        }, 300);
+      } catch (e) { console.log("Audio diblokir browser."); }
+    }
+
+    function speakQueue(queueNumber, counterName) {
+      if ('speechSynthesis' in window) {
+        let spelledNumber = formatSpelling(queueNumber);
+        let textToSpeak = "Nomor antrean, " + spelledNumber + ", silakan menuju, " + counterName;
+        let msg = new SpeechSynthesisUtterance();
+        msg.text = textToSpeak;
+        msg.lang = 'id-ID'; msg.rate = 1.0; msg.pitch = 1.2;
+        window.speechSynthesis.cancel(); 
+        window.speechSynthesis.speak(msg);
+      }
+    }
+
+    function triggerFlash(element) {
+      element.classList.add('flash');
+      setTimeout(() => { element.classList.remove('flash'); }, 4000);
+    }
+
+    // --- PENGATURAN REAL-TIME (Diletakkan di luar agar langsung aktif otomatis) ---
+    database.ref('pengaturan').on('value', function(snapshot) {
+      var data = snapshot.val();
+      if (data) {
+        if (data.instansi) {
+          document.getElementById('namaInstansi').innerText = data.instansi;
+        }
+        if (data.ticker) {
+          document.getElementById('teksTicker').innerText = data.ticker;
+        }
+        if (data.video) {
+          var videoElement = document.getElementById('videoPlayer');
+          if (videoElement) {
+            var currentSrc = videoElement.src;
+            var newSrc = "https://www.youtube.com/embed/" + data.video + "?autoplay=1&mute=1&loop=1&playlist=" + data.video;
+            if (!currentSrc.includes(data.video)) {
+              videoElement.src = newSrc;
+            }
+          }
+        }
+      }
+    });
+
+    // --- ANTREAN AKTIF REAL-TIME ---
+    window.onload = function() {
+      database.ref('antrean/aktif').on('value', (snapshot) => {
+        const data = snapshot.val();
+        const bottomRow = document.getElementById('bottomRowCards');
+        bottomRow.innerHTML = '';
+
+        if (data) {
+          let latestCall = null;
+          let latestTimestamp = 0;
+          const colors = ['#a855f7', '#22c55e', '#ef4444', '#0ea5e9', '#f97316'];
+          let colorIndex = 0;
+
+          for (let key in data) {
+            let item = data[key];
+            let namaDivisi = item.divisi === 'CS' ? 'Customer Service' : (item.divisi === 'KASIR' ? 'Kasir' : item.divisi);
+
+            if (item.timestamp > latestTimestamp) {
+              latestTimestamp = item.timestamp;
+              latestCall = item;
+            }
+
+            let bgColor = colors[colorIndex % colors.length];
+            bottomRow.innerHTML += `
+              <div class="counter-card" style="background-color: ${bgColor};">
+                <div class="card-header">${namaDivisi}</div>
+                <div class="card-number">${item.nomor}</div>
+              </div>
+            `;
+            colorIndex++;
+          }
+
+          if (latestCall && latestTimestamp > lastCalledTime) {
+            lastCalledTime = latestTimestamp;
+            let textDivisi = latestCall.divisi === 'CS' ? 'Customer Service' : (latestCall.divisi === 'KASIR' ? 'Kasir' : latestCall.divisi);
+            
+            document.getElementById('tvNumber').innerText = latestCall.nomor;
+            document.getElementById('tvCounter').innerText = textDivisi;
+
+            triggerFlash(document.getElementById('tvNumber'));
+            playChime();
+            
+            setTimeout(() => {
+              speakQueue(latestCall.nomor, textDivisi);
+            }, 1200);
+          } 
+          else if (latestCall && latestTimestamp === lastCalledTime) {
+            let textDivisi = latestCall.divisi === 'CS' ? 'Customer Service' : (latestCall.divisi === 'KASIR' ? 'Kasir' : latestCall.divisi);
+            document.getElementById('tvNumber').innerText = latestCall.nomor;
+            document.getElementById('tvCounter').innerText = textDivisi;
+          }
+        } else {
+           document.getElementById('tvNumber').innerText = "---";
+           document.getElementById('tvCounter').innerText = "MENUNGGU PANGGILAN";
+           bottomRow.innerHTML = '<div style="color:#666; margin:auto; font-size:20px;">Belum ada loket yang melayani</div>';
+        }
+      });
+    };
+  </script>
+</body>
+</html>
