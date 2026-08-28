@@ -91,15 +91,7 @@
 
       var parentUrl = document.referrer; 
       
-      if (parentUrl && parentUrl.includes('script.google.com')) {
-        globalBaseUrl = parentUrl.split('?')[0]; 
-        readyToGo();
-      } else {
-        google.script.run.withSuccessHandler(function(url) {
-          globalBaseUrl = url;
-          readyToGo();
-        }).getScriptUrl();
-      }
+      
     };
 
     function readyToGo() {
