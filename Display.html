@@ -100,7 +100,7 @@
   </div>
 
   <div class="footer-ticker">
-    <marquee id="teksTicker" scrollamount="8">JAM BUKA LAYANAN KAMI ADALAH PUKUL 08.00 s.d 16.00...</marquee>
+    <marquee id="teksTicker" scrollamount="8">JAM BUKA LAYANAN KAMI ADA PUKUL 08.00 s.d 16.00...</marquee>
   </div>
 
   <script>
@@ -174,7 +174,7 @@
       setTimeout(() => { element.classList.remove('flash'); }, 4000);
     }
 
-    // --- PENGATURAN REAL-TIME (Diletakkan di luar agar langsung aktif otomatis) ---
+    // --- PENGATURAN REAL-TIME ---
     database.ref('pengaturan').on('value', function(snapshot) {
       var data = snapshot.val();
       if (data) {

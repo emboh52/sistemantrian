@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QAntri - Hub Antrean Digital</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -42,25 +43,6 @@
     .btn-dashboard { background-color: #fdcb6e; color: #2d3436; }
     .btn-dashboard:hover { background-color: #ffeaa7; }
     
-    .btn-admin-small {
-      display: inline-block;
-      margin-top: 15px;
-      padding: 10px 25px;
-      font-size: 14px;
-      font-weight: bold;
-      color: #66fcf1;
-      background: transparent;
-      border: 1px solid #66fcf1;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .btn-admin-small:hover {
-      background: #66fcf1;
-      color: #0b0c10;
-      box-shadow: 0 5px 15px rgba(102, 252, 241, 0.4);
-    }
-    
     .footer { margin-top: 30px; font-size: 12px; color: #8c8c8c; }
   </style>
 </head>
@@ -70,43 +52,37 @@
     <h1>QAntri</h1>
     <p>Antrean Digital untuk UMKM</p>
     
-    <p id="status-text" style="color: #66fcf1; font-weight: bold; font-size: 12px; margin-bottom: 20px;">
-      ⏳ Memuat sistem...
-    </p>
-    
+    <!-- Tombol diarahkan langsung ke file HTML di Vercel -->
     <button class="menu-btn btn-register" onclick="openPage('register')">📝 Halaman Ambil Antrean (Pelanggan)</button>
     <button class="menu-btn btn-display" onclick="openPage('display')">📺 Halaman Display TV (Ruang Tunggu)</button>
     <button class="menu-btn btn-dashboard" onclick="openPage('dashboard')">👨‍💻 Dashboard Petugas / Kasir</button>
-    <button class="btn-admin-small" onclick="openPage('analytics')">🔐 Login Admin</button>
    
     <div class="footer">UMKM Digital Solution &bull; Vibe Coding Project</div>
   </div>
 
-  <script>
-    var globalBaseUrl = "";
+  <!-- Inisialisasi Firebase menggunakan Firebase v10 SDK Modular via CDN -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 
-    window.onload = function() {
-      var buttons = document.querySelectorAll('button');
-      buttons.forEach(function(btn) { btn.disabled = true; btn.style.opacity = '0.5'; });
-
-      var parentUrl = document.referrer; 
-      
-      
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
+      authDomain: "qantri-app.firebaseapp.com",
+      databaseURL: "https://qantri-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "qantri-app",
+      storageBucket: "qantri-app.firebasestorage.app",
+      messagingSenderId: "687819838654",
+      appId: "1:687819838654:web:6a56ebb0d43ecf1fa4baef"
     };
 
-    function readyToGo() {
-      document.getElementById('status-text').style.display = 'none';
-      var buttons = document.querySelectorAll('button');
-      buttons.forEach(function(btn) { btn.disabled = false; btn.style.opacity = '1'; });
-    }
+    // Inisialisasi Firebase
+    const app = initializeApp(firebaseConfig);
+    console.log("Firebase Berhasil Terhubung ke Hub!");
+  </script>
 
-    // DIUBAH DISINI: Menggunakan window.open agar terbuka di TAB BARU
+  <script>
+    // Fungsi navigasi langsung antar halaman di Vercel
     function openPage(pageName) {
-      if (!globalBaseUrl) {
-        alert("Sistem masih memuat, silakan tunggu sebentar!");
-        return;
-      }
-      window.open(globalBaseUrl + "?page=" + pageName, '_blank');
+      window.location.href = pageName + ".html";
     }
   </script>
 </body>
