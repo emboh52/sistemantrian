@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Petugas & Admin</title>
+  
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #334155; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; flex-wrap: wrap; gap: 15px;}
+    h1 { margin: 0; font-size: 22px; color: #1e293b; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
+    .badge-live { background: #22c55e; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .btn-setting { background: #475569; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .btn-setting:hover { background: #334155; }
+    .btn-excel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .btn-excel:hover { background: #059669; }
+
+    /* Grid otomatis menyesuaikan jumlah loket yang diatur admin */
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    
+    .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 6px solid #3b82f6; }
+    h3 { margin-top: 0; color: #475569; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; text-align: center; text-transform: uppercase; }
+    .current-call { font-size: 40px; font-weight: 900; color: #0f172a; margin: 10px 0; text-align: center; }
+    .status-text { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 15px; font-weight: bold; }
+    .waiting-list { margin-top: 15px; max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; background: #f8fafc; }
+    .waiting-item { padding: 10px; background: white; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
+    .btn-panggil { background: #3b82f6; color: white; padding: 6px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .btn-panggil:hover { background: #2563eb; }
+
+    /* Modal Pengaturan */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 999; }
+    .modal-box { background: white; padding: 25px; border-radius: 12px; width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+    .modal-box label { font-size: 13px; font-weight: bold; display: block; margin-bottom: 5px; color: #334155; margin-top: 12px; }
+    .modal-box input { width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    .modal-box small { display: block; margin-bottom: 10px; color: #64748b; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>👨‍💻 Dashboard Petugas & Admin</h1>
+    <div class="header-actions">
+      <!-- Tombol Download Excel Ditambahkan di Sini -->
+      <button class="btn-excel" onclick="downloadLaporanExcel()">📥 Download Laporan</button>
+      <button class="btn-setting" onclick="bukaPengaturan()">⚙️ Pengaturan Sistem</button>
+      <div class="badge-live">● REAL-TIME</div>
+    </div>
+  </div>
+
+  <div class="grid-container" id="dashboardGrid">
+    <p style="text-align: center; color: #64748b; grid-column: 1/-1;">Memuat data loket...</p>
+  </div>
+
+  <div class="modal-overlay" id="modalPengaturan">
+    <div class="modal-box">
+      <h2 style="margin-top: 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">⚙️ Konfigurasi Sistem</h2>
+      
+      <label>Daftar Loket / Divisi</label>
+      <input type="text" id="setLoket" placeholder="Contoh: KASIR, APOTEK atau cukup 1: UMUM">
+      <small>Pisahkan dengan tanda koma (,). Jika hanya butuh 1 loket, ketik 1 nama saja.</small>
+
+      <label>Nama Usaha / Instansi</label>
+      <input type="text" id="setInstansi" placeholder="Misal: Klinik Sehat / Apotek Budi">
+      
+      <label>Teks Berjalan TV (Running Text)</label>
+      <input type="text" id="setTicker" placeholder="Pengumuman atau informasi layanan...">
+      
+      <label>ID Video YouTube (Opsional)</label>
+      <input type="text" id="setVideo" placeholder="Contoh: aqz-KE-bpKQ">
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button onclick="simpanPengaturan()" style="flex: 1; background: #22c55e; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Simpan & Terapkan</button>
+        <button onclick="tutupPengaturan()" style="flex: 1; background: #ef4444; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Batal</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
+      authDomain: "qantri-app.firebaseapp.com",
+      databaseURL: "https://qantri-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "qantri-app",
+      storageBucket: "qantri-app.firebasestorage.app",
+      messagingSenderId: "687819838654",
+      appId: "1:687819838654:web:6a56ebb0d43ecf1fa4baef"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let globalLoket = ['UMUM'];
+    let dataMenunggu = null;
+    let dataAktif = null;
+
+    // 1. Pantau Pengaturan Loket
+    database.ref('pengaturan').on('value', (snapshot) => {
+      const p = snapshot.val();
+      if (p && p.loket) {
+        globalLoket = p.loket.split(',').map(s => s.trim().toUpperCase());
+      } else {
+        globalLoket = ['UMUM'];
+      }
+      renderDashboard();
+    });
+
+    // 2. Pantau Antrean Menunggu
+    database.ref('antrean/menunggu').on('value', (snapshot) => {
+      dataMenunggu = snapshot.val();
+      renderDashboard();
+    });
+
+    // 3. Pantau Antrean Aktif
+    database.ref('antrean/aktif').on('value', (snapshot) => {
+      dataAktif = snapshot.val();
+      renderDashboard();
+    });
+
+    // Fungsi Render Card Dashboard secara Dinamis
+    function renderDashboard() {
+      const grid = document.getElementById('dashboardGrid');
+      let html = '';
+
+      globalLoket.forEach(loket => {
+        let currentNum = '---';
+        if (dataAktif && dataAktif[loket]) {
+          currentNum = dataAktif[loket].nomor;
+        }
+
+        let htmlMenunggu = '';
+        if (dataMenunggu) {
+          Object.keys(dataMenunggu).forEach(key => {
+            let item = dataMenunggu[key];
+            if (item.divisi === loket) {
+              htmlMenunggu += `
+                <div class="waiting-item">
+                  <div>
+                    <strong style="font-size: 18px; color: #0f172a;">${item.nomor}</strong>
+                    <div style="font-size: 12px; color: #64748b;">${item.nama || 'Tanpa Nama'}</div>
+                  </div>
+                  <button class="btn-panggil" onclick="panggilKeTV('${key}', '${item.nomor}', '${loket}')">📢 Panggil</button>
+                </div>
+              `;
+            }
+          });
+        }
+        if (htmlMenunggu === '') {
+          htmlMenunggu = '<p style="text-align: center; color: #94a3b8;">Tidak ada antrean</p>';
+        }
+
+        html += `
+          <div class="card">
+            <h3>LOKET: ${loket}</h3>
+            <div class="status-text">SEDANG DILAYANI</div>
+            <div class="current-call">${currentNum}</div>
+            <div style="margin-top: 20px; font-weight: bold; font-size: 13px; color: #64748b;">Daftar Antrean Menunggu:</div>
+            <div class="waiting-list">${htmlMenunggu}</div>
+          </div>
+        `;
+      });
+
+      grid.innerHTML = html;
+    }
+
+    // --- MODIFIKASI: FUNGSI PANGGIL & SIMPAN RIWAYAT ---
+    window.panggilKeTV = function(key, nomor, divisi) {
+      // Ambil detail data sebelum dihapus agar bisa disimpan ke riwayat Excel
+      const itemDetail = dataMenunggu[key]; 
+
+      // 1. Lempar nomor ke layar TV
+      database.ref('antrean/aktif/' + divisi).set({
+        nomor: nomor,
+        divisi: divisi,
+        status: "CALLED",
+        timestamp: Date.now()
+      }).then(() => {
+        // 2. BACKUP DATA KE RIWAYAT (Untuk laporan Excel)
+        database.ref('antrean/riwayat').push({
+          ...itemDetail,
+          status: "selesai dipanggil",
+          waktuPanggil: Date.now()
+        });
+
+        // 3. Hapus data dari daftar menunggu
+        database.ref('antrean/menunggu/' + key).remove();
+      }).catch((e) => console.error("Gagal memanggil:", e));
+    };
+
+    // --- FITUR BARU: DOWNLOAD EXCEL ---
+    window.downloadLaporanExcel = function() {
+      // Tarik seluruh data (baik yang menunggu maupun yang sudah di riwayat)
+      database.ref('antrean').once('value').then((snapshot) => {
+        const data = snapshot.val();
+        if (!data || (!data.menunggu && !data.riwayat)) {
+          alert("Tidak ada data antrean untuk diunduh!");
+          return;
+        }
+
+        // Header CSV
+        let csvContent = "Tanggal,Nomor Antrean,Divisi,Nama,No HP,Alamat,Status\n";
+
+        // Fungsi bantu untuk mengekstrak data dari folder Firebase ke bentuk baris Excel
+        const ekstrakData = (nodeData, statusDefault) => {
+          for (let key in nodeData) {
+            let row = nodeData[key];
+            let tanggal = `"${row.tanggal || '-'}"`;
+            let nomor = `"${row.nomor || '-'}"`;
+            let divisi = `"${row.divisi || '-'}"`;
+            let nama = `"${row.nama || '-'}"`;
+            let phone = `"${row.phone || '-'}"`;
+            let address = `"${row.address || '-'}"`;
+            let status = `"${row.status || statusDefault}"`;
+
+            csvContent += `${tanggal},${nomor},${divisi},${nama},${phone},${address},${status}\n`;
+          }
+        };
+
+        // Ekstrak data yang belum dipanggil
+        if (data.menunggu) {
+          ekstrakData(data.menunggu, "menunggu");
+        }
+        
+        // Ekstrak data yang sudah selesai dipanggil (dari riwayat)
+        if (data.riwayat) {
+          ekstrakData(data.riwayat, "selesai");
+        }
+
+        // Proses download ke komputer
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "Rekap_Antrean_Lengkap.csv"); 
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+      }).catch((error) => {
+        console.error("Gagal menarik data Excel:", error);
+        alert("Terjadi kesalahan saat membuat file Excel.");
+      });
+    };
+
+    function bukaPengaturan() {
+      document.getElementById('modalPengaturan').style.display = 'flex';
+      database.ref('pengaturan').once('value').then((snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          document.getElementById('setLoket').value = data.loket || 'UMUM';
+          document.getElementById('setInstansi').value = data.instansi || '';
+          document.getElementById('setTicker').value = data.ticker || '';
+          document.getElementById('setVideo').value = data.video || '';
+        }
+      }).catch(e => console.log("Belum ada pengaturan."));
+    }
+
+    function tutupPengaturan() {
+      document.getElementById('modalPengaturan').style.display = 'none';
+    }
+
+    function simpanPengaturan() {
+      const loket = document.getElementById('setLoket').value.trim();
+      const instansi = document.getElementById('setInstansi').value.trim();
+      const ticker = document.getElementById('setTicker').value.trim();
+      const video = document.getElementById('setVideo').value.trim();
+
+      if (!loket) {
+        alert("Daftar loket tidak boleh kosong!");
+        return;
+      }
+
+      database.ref('pengaturan').set({
+        loket: loket,
+        instansi: instansi,
+        ticker: ticker,
+        video: video
+      }).then(() => {
+        alert("Pengaturan berhasil disimpan & diterapkan ke seluruh sistem!");
+        tutupPengaturan();
+      }).catch((e) => alert("Gagal menyimpan: " + e.message));
+    }
+  </script>
+</body>
+</html>
