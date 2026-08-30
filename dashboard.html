@@ -37,14 +37,32 @@
     .modal-box label { font-size: 13px; font-weight: bold; display: block; margin-bottom: 5px; color: #334155; margin-top: 12px; }
     .modal-box input { width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
     .modal-box small { display: block; margin-bottom: 10px; color: #64748b; font-size: 11px; }
+
+    /* Style untuk Kotak Login PIN */
+    .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+    .login-card { background: white; padding: 30px; border-radius: 12px; width: 320px; text-align: center; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 18px; letter-spacing: 4px; }
+    .login-card button { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .login-card button:hover { background: #2563eb; }
   </style>
 </head>
 <body>
 
+  <!-- KOTAK LOGIN PIN PENGAMAN -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <h2>🔒 Login Petugas</h2>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">Masukkan PIN Akses Dashboard</p>
+      <input type="password" id="pinInput" placeholder="••••" maxlength="6" onkeypress="if(event.key === 'Enter') cekPin()">
+      <button onclick="cekPin()">Masuk</button>
+      <p style="font-size: 11px; color: #94a3b8; margin-top: 15px; margin-bottom: 0;">Default PIN awal: <b>1234</b></p>
+    </div>
+  </div>
+
   <div class="header">
     <h1>👨‍💻 Dashboard Petugas & Admin</h1>
     <div class="header-actions">
-      <!-- Tombol Download Excel Ditambahkan di Sini -->
+      <!-- Tombol Download Excel -->
       <button class="btn-excel" onclick="downloadLaporanExcel()">📥 Download Laporan</button>
       <button class="btn-setting" onclick="bukaPengaturan()">⚙️ Pengaturan Sistem</button>
       <div class="badge-live">● REAL-TIME</div>
@@ -72,6 +90,10 @@
       <label>ID Video YouTube (Opsional)</label>
       <input type="text" id="setVideo" placeholder="Contoh: aqz-KE-bpKQ">
 
+      <label>PIN Akses Dashboard Petugas</label>
+      <input type="password" id="setPin" placeholder="Masukkan PIN baru (angka)" maxlength="6">
+      <small>Digunakan untuk mengamankan halaman dashboard dari akses luar.</small>
+
       <div style="display: flex; gap: 10px; margin-top: 20px;">
         <button onclick="simpanPengaturan()" style="flex: 1; background: #22c55e; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Simpan & Terapkan</button>
         <button onclick="tutupPengaturan()" style="flex: 1; background: #ef4444; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">Batal</button>
@@ -96,6 +118,26 @@
     let globalLoket = ['UMUM'];
     let dataMenunggu = null;
     let dataAktif = null;
+
+    // --- FUNGSI CEK PIN LOGIN ---
+    function cekPin() {
+      const inputPin = document.getElementById('pinInput').value.trim();
+      
+      database.ref('pengaturan/pin').once('value').then((snapshot) => {
+        const savedPin = snapshot.val() || "1234"; // Default PIN 1234 jika belum diatur
+        
+        if (inputPin === savedPin) {
+          // PIN benar, tutup kotak login
+          document.getElementById('loginOverlay').style.display = 'none';
+        } else {
+          alert("PIN salah! Silakan coba lagi.");
+          document.getElementById('pinInput').value = '';
+          document.getElementById('pinInput').focus();
+        }
+      }).catch((e) => {
+        alert("Gagal memverifikasi PIN. Periksa koneksi internet.");
+      });
+    }
 
     // 1. Pantau Pengaturan Loket
     database.ref('pengaturan').on('value', (snapshot) => {
@@ -166,33 +208,28 @@
       grid.innerHTML = html;
     }
 
-    // --- MODIFIKASI: FUNGSI PANGGIL & SIMPAN RIWAYAT ---
+    // --- FUNGSI PANGGIL & SIMPAN RIWAYAT ---
     window.panggilKeTV = function(key, nomor, divisi) {
-      // Ambil detail data sebelum dihapus agar bisa disimpan ke riwayat Excel
       const itemDetail = dataMenunggu[key]; 
 
-      // 1. Lempar nomor ke layar TV
       database.ref('antrean/aktif/' + divisi).set({
         nomor: nomor,
         divisi: divisi,
         status: "CALLED",
         timestamp: Date.now()
       }).then(() => {
-        // 2. BACKUP DATA KE RIWAYAT (Untuk laporan Excel)
         database.ref('antrean/riwayat').push({
           ...itemDetail,
           status: "selesai dipanggil",
           waktuPanggil: Date.now()
         });
 
-        // 3. Hapus data dari daftar menunggu
         database.ref('antrean/menunggu/' + key).remove();
       }).catch((e) => console.error("Gagal memanggil:", e));
     };
 
-    // --- FITUR BARU: DOWNLOAD EXCEL ---
+    // --- DOWNLOAD EXCEL ---
     window.downloadLaporanExcel = function() {
-      // Tarik seluruh data (baik yang menunggu maupun yang sudah di riwayat)
       database.ref('antrean').once('value').then((snapshot) => {
         const data = snapshot.val();
         if (!data || (!data.menunggu && !data.riwayat)) {
@@ -200,10 +237,8 @@
           return;
         }
 
-        // Header CSV
         let csvContent = "Tanggal,Nomor Antrean,Divisi,Nama,No HP,Alamat,Status\n";
 
-        // Fungsi bantu untuk mengekstrak data dari folder Firebase ke bentuk baris Excel
         const ekstrakData = (nodeData, statusDefault) => {
           for (let key in nodeData) {
             let row = nodeData[key];
@@ -219,17 +254,14 @@
           }
         };
 
-        // Ekstrak data yang belum dipanggil
         if (data.menunggu) {
           ekstrakData(data.menunggu, "menunggu");
         }
         
-        // Ekstrak data yang sudah selesai dipanggil (dari riwayat)
         if (data.riwayat) {
           ekstrakData(data.riwayat, "selesai");
         }
 
-        // Proses download ke komputer
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -254,6 +286,7 @@
           document.getElementById('setInstansi').value = data.instansi || '';
           document.getElementById('setTicker').value = data.ticker || '';
           document.getElementById('setVideo').value = data.video || '';
+          document.getElementById('setPin').value = data.pin || '';
         }
       }).catch(e => console.log("Belum ada pengaturan."));
     }
@@ -267,21 +300,29 @@
       const instansi = document.getElementById('setInstansi').value.trim();
       const ticker = document.getElementById('setTicker').value.trim();
       const video = document.getElementById('setVideo').value.trim();
+      const pinInputVal = document.getElementById('setPin').value.trim();
 
       if (!loket) {
         alert("Daftar loket tidak boleh kosong!");
         return;
       }
 
-      database.ref('pengaturan').set({
-        loket: loket,
-        instansi: instansi,
-        ticker: ticker,
-        video: video
-      }).then(() => {
-        alert("Pengaturan berhasil disimpan & diterapkan ke seluruh sistem!");
-        tutupPengaturan();
-      }).catch((e) => alert("Gagal menyimpan: " + e.message));
+      // Ambil PIN lama jika input kosong, atau gunakan default "1234" jika belum pernah diset
+      database.ref('pengaturan').once('value').then((snapshot) => {
+        const existingData = snapshot.val() || {};
+        const finalPin = pinInputVal !== "" ? pinInputVal : (existingData.pin || "1234");
+
+        database.ref('pengaturan').set({
+          loket: loket,
+          instansi: instansi,
+          ticker: ticker,
+          video: video,
+          pin: finalPin
+        }).then(() => {
+          alert("Pengaturan dan PIN berhasil disimpan & diterapkan!");
+          tutupPengaturan();
+        }).catch((e) => alert("Gagal menyimpan: " + e.message));
+      });
     }
   </script>
 </body>
