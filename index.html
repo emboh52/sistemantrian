@@ -80,10 +80,41 @@
   </script>
 
  <script>
+// Fungsi untuk mengambil ID Toko/Tenant yang aktif
+function getTenantId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let tenant = urlParams.get('tenant');
+  
+  if (tenant) {
+    // Simpan ke memory browser agar tidak hilang
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+    return tenant.toLowerCase().trim();
+  }
+  
+  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
+  tenant = localStorage.getItem('qantri_tenant');
+  
+  if (!tenant) {
+    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
+    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+    if (!tenant) tenant = "demo";
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+  }
+  
+  return tenant;
+}
+
+// Inisialisasi variabel tenantId di awal script
+const tenantId = getTenantId();
+console.log("Sistem berjalan untuk Tenant:", tenantId);
+
+
+
     // Fungsi navigasi untuk membuka halaman di tab baru
     function openPage(pageName) {
-      window.open(pageName + ".html", '_blank');
-    }
+  // Buka halaman baru sambil membawa ID Tenant
+  window.open(pageName + ".html?tenant=" + tenantId, '_blank');
+}
   </script>
 </body>
 </html>

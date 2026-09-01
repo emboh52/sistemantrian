@@ -61,8 +61,7 @@
                     String(d.getDate()).padStart(2, '0');
 
       // 2. Tentukan lokasi counter di Firebase (contoh: counters/2026-08-22/A)
-      const counterRef = database.ref('counters/' + today + '/' + prefix);
-
+const counterRef = database.ref(`tenants/${tenantId}/counters/${today}/${prefix}`);
       // Ubah tombol jadi loading
       const buttons = document.querySelectorAll('.btn-submit');
       buttons.forEach(btn => btn.disabled = true);
@@ -98,7 +97,7 @@
           };
 
           // 6. Push data ke folder 'antrean/menunggu'
-          database.ref('antrean/menunggu').push(dataAntrean).then(() => {
+          database.ref(`tenants/${tenantId}/antrean/menunggu`).push(dataAntrean).then(() => {
             document.getElementById('formBox').style.display = 'none';
             document.getElementById('resultBox').style.display = 'block';
             document.getElementById('displayTicketNum').innerText = nomorAntrean;
@@ -115,6 +114,34 @@
         }
       });
     }
+
+    // Fungsi untuk mengambil ID Toko/Tenant yang aktif
+function getTenantId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let tenant = urlParams.get('tenant');
+  
+  if (tenant) {
+    // Simpan ke memory browser agar tidak hilang
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+    return tenant.toLowerCase().trim();
+  }
+  
+  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
+  tenant = localStorage.getItem('qantri_tenant');
+  
+  if (!tenant) {
+    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
+    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+    if (!tenant) tenant = "demo";
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+  }
+  
+  return tenant;
+}
+
+// Inisialisasi variabel tenantId di awal script
+const tenantId = getTenantId();
+console.log("Sistem berjalan untuk Tenant:", tenantId);
 
     // Fungsi kecil untuk memulihkan tombol setelah proses selesai/gagal
     function resetLoading(buttons) {

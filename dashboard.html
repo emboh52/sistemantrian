@@ -140,7 +140,7 @@
     }
 
     // 1. Pantau Pengaturan Loket
-    database.ref('pengaturan').on('value', (snapshot) => {
+    database.ref(`tenants/${tenantId}/pengaturan`).on('value', (snapshot) => {
       const p = snapshot.val();
       if (p && p.loket) {
         globalLoket = p.loket.split(',').map(s => s.trim().toUpperCase());
@@ -151,7 +151,7 @@
     });
 
     // 2. Pantau Antrean Menunggu
-    database.ref('antrean/menunggu').on('value', (snapshot) => {
+   database.ref(`tenants/${tenantId}/antrean/menunggu`).on('value', (snapshot) => {
       dataMenunggu = snapshot.val();
       renderDashboard();
     });
@@ -306,6 +306,35 @@
         alert("Daftar loket tidak boleh kosong!");
         return;
       }
+
+
+      // Fungsi untuk mengambil ID Toko/Tenant yang aktif
+function getTenantId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let tenant = urlParams.get('tenant');
+  
+  if (tenant) {
+    // Simpan ke memory browser agar tidak hilang
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+    return tenant.toLowerCase().trim();
+  }
+  
+  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
+  tenant = localStorage.getItem('qantri_tenant');
+  
+  if (!tenant) {
+    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
+    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+    if (!tenant) tenant = "demo";
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+  }
+  
+  return tenant;
+}
+
+// Inisialisasi variabel tenantId di awal script
+const tenantId = getTenantId();
+console.log("Sistem berjalan untuk Tenant:", tenantId);
 
       // Ambil PIN lama jika input kosong, atau gunakan default "1234" jika belum pernah diset
       database.ref('pengaturan').once('value').then((snapshot) => {

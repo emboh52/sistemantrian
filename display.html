@@ -175,7 +175,7 @@
     }
 
     // --- PENGATURAN REAL-TIME ---
-    database.ref('pengaturan').on('value', function(snapshot) {
+    database.ref(`tenants/${tenantId}/pengaturan`).on('value', function(snapshot) {
       var data = snapshot.val();
       if (data) {
         if (data.instansi) {
@@ -197,9 +197,37 @@
       }
     });
 
+    // Fungsi untuk mengambil ID Toko/Tenant yang aktif
+function getTenantId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  let tenant = urlParams.get('tenant');
+  
+  if (tenant) {
+    // Simpan ke memory browser agar tidak hilang
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+    return tenant.toLowerCase().trim();
+  }
+  
+  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
+  tenant = localStorage.getItem('qantri_tenant');
+  
+  if (!tenant) {
+    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
+    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+    if (!tenant) tenant = "demo";
+    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+  }
+  
+  return tenant;
+}
+
+// Inisialisasi variabel tenantId di awal script
+const tenantId = getTenantId();
+console.log("Sistem berjalan untuk Tenant:", tenantId);
+
     // --- ANTREAN AKTIF REAL-TIME ---
     window.onload = function() {
-      database.ref('antrean/aktif').on('value', (snapshot) => {
+      database.ref(`tenants/${tenantId}/antrean/aktif`).on('value', (snapshot) => {
         const data = snapshot.val();
         const bottomRow = document.getElementById('bottomRowCards');
         bottomRow.innerHTML = '';
