@@ -104,6 +104,7 @@
   </div>
 
   <script>
+    // 1. UPDATE JAM & TANGGAL
     function updateClock() {
       const now = new Date();
       const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -113,6 +114,7 @@
     setInterval(updateClock, 1000);
     updateClock();
 
+    // 2. INISIALISASI FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
       authDomain: "qantri-app.firebaseapp.com",
@@ -128,8 +130,33 @@
     }
     const database = firebase.database();
 
+    // 3. FUNGSI TENANT ID (DILETAKKAN SEBELUM PEMANGGILAN DATABASE)
+    function getTenantId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let tenant = urlParams.get('tenant');
+      
+      if (tenant) {
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+        return tenant.toLowerCase().trim();
+      }
+      
+      tenant = localStorage.getItem('qantri_tenant');
+      
+      if (!tenant) {
+        tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+        if (!tenant) tenant = "demo";
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+      }
+      
+      return tenant;
+    }
+
+    const tenantId = getTenantId();
+    console.log("Sistem berjalan untuk Tenant:", tenantId);
+
     let lastCalledTime = 0;
 
+    // 4. FUNGSI AUDIO & SUARA PANGGILAN
     function formatSpelling(queueNumber) {
       return queueNumber.split('').map(char => char === '0' ? 'nol' : char).join(', ');
     }
@@ -174,7 +201,7 @@
       setTimeout(() => { element.classList.remove('flash'); }, 4000);
     }
 
-    // --- PENGATURAN REAL-TIME ---
+    // 5. PANTAU PENGATURAN REAL-TIME
     database.ref(`tenants/${tenantId}/pengaturan`).on('value', function(snapshot) {
       var data = snapshot.val();
       if (data) {
@@ -197,35 +224,7 @@
       }
     });
 
-    // Fungsi untuk mengambil ID Toko/Tenant yang aktif
-function getTenantId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let tenant = urlParams.get('tenant');
-  
-  if (tenant) {
-    // Simpan ke memory browser agar tidak hilang
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-    return tenant.toLowerCase().trim();
-  }
-  
-  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
-  tenant = localStorage.getItem('qantri_tenant');
-  
-  if (!tenant) {
-    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
-    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
-    if (!tenant) tenant = "demo";
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-  }
-  
-  return tenant;
-}
-
-// Inisialisasi variabel tenantId di awal script
-const tenantId = getTenantId();
-console.log("Sistem berjalan untuk Tenant:", tenantId);
-
-    // --- ANTREAN AKTIF REAL-TIME ---
+    // 6. PANTAU ANTREAN AKTIF REAL-TIME
     window.onload = function() {
       database.ref(`tenants/${tenantId}/antrean/aktif`).on('value', (snapshot) => {
         const data = snapshot.val();
@@ -277,9 +276,9 @@ console.log("Sistem berjalan untuk Tenant:", tenantId);
             document.getElementById('tvCounter').innerText = textDivisi;
           }
         } else {
-           document.getElementById('tvNumber').innerText = "---";
-           document.getElementById('tvCounter').innerText = "MENUNGGU PANGGILAN";
-           bottomRow.innerHTML = '<div style="color:#666; margin:auto; font-size:20px;">Belum ada loket yang melayani</div>';
+            document.getElementById('tvNumber').innerText = "---";
+            document.getElementById('tvCounter').innerText = "MENUNGGU PANGGILAN";
+            bottomRow.innerHTML = '<div style="color:#666; margin:auto; font-size:20px;">Belum ada loket yang melayani</div>';
         }
       });
     };

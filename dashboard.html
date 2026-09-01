@@ -19,7 +19,6 @@
     .btn-excel { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
     .btn-excel:hover { background: #059669; }
 
-    /* Grid otomatis menyesuaikan jumlah loket yang diatur admin */
     .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
     
     .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 6px solid #3b82f6; }
@@ -31,14 +30,12 @@
     .btn-panggil { background: #3b82f6; color: white; padding: 6px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
     .btn-panggil:hover { background: #2563eb; }
 
-    /* Modal Pengaturan */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 999; }
     .modal-box { background: white; padding: 25px; border-radius: 12px; width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
     .modal-box label { font-size: 13px; font-weight: bold; display: block; margin-bottom: 5px; color: #334155; margin-top: 12px; }
     .modal-box input { width: 100%; padding: 10px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
     .modal-box small { display: block; margin-bottom: 10px; color: #64748b; font-size: 11px; }
 
-    /* Style untuk Kotak Login PIN */
     .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 9999; }
     .login-card { background: white; padding: 30px; border-radius: 12px; width: 320px; text-align: center; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
     .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 18px; letter-spacing: 4px; }
@@ -62,7 +59,6 @@
   <div class="header">
     <h1>👨‍💻 Dashboard Petugas & Admin</h1>
     <div class="header-actions">
-      <!-- Tombol Download Excel -->
       <button class="btn-excel" onclick="downloadLaporanExcel()">📥 Download Laporan</button>
       <button class="btn-setting" onclick="bukaPengaturan()">⚙️ Pengaturan Sistem</button>
       <div class="badge-live">● REAL-TIME</div>
@@ -115,6 +111,30 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
+    // 1. Deklarasi Fungsi getTenantId() & tenantId di Awal Script
+    function getTenantId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let tenant = urlParams.get('tenant');
+      
+      if (tenant) {
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+        return tenant.toLowerCase().trim();
+      }
+      
+      tenant = localStorage.getItem('qantri_tenant');
+      
+      if (!tenant) {
+        tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+        if (!tenant) tenant = "demo";
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+      }
+      
+      return tenant;
+    }
+
+    const tenantId = getTenantId();
+    console.log("Sistem berjalan untuk Tenant:", tenantId);
+
     let globalLoket = ['UMUM'];
     let dataMenunggu = null;
     let dataAktif = null;
@@ -123,11 +143,10 @@
     function cekPin() {
       const inputPin = document.getElementById('pinInput').value.trim();
       
-      database.ref('pengaturan/pin').once('value').then((snapshot) => {
-        const savedPin = snapshot.val() || "1234"; // Default PIN 1234 jika belum diatur
+      database.ref(`tenants/${tenantId}/pengaturan/pin`).once('value').then((snapshot) => {
+        const savedPin = snapshot.val() || "1234";
         
         if (inputPin === savedPin) {
-          // PIN benar, tutup kotak login
           document.getElementById('loginOverlay').style.display = 'none';
         } else {
           alert("PIN salah! Silakan coba lagi.");
@@ -151,13 +170,13 @@
     });
 
     // 2. Pantau Antrean Menunggu
-   database.ref(`tenants/${tenantId}/antrean/menunggu`).on('value', (snapshot) => {
+    database.ref(`tenants/${tenantId}/antrean/menunggu`).on('value', (snapshot) => {
       dataMenunggu = snapshot.val();
       renderDashboard();
     });
 
     // 3. Pantau Antrean Aktif
-    database.ref('antrean/aktif').on('value', (snapshot) => {
+    database.ref(`tenants/${tenantId}/antrean/aktif`).on('value', (snapshot) => {
       dataAktif = snapshot.val();
       renderDashboard();
     });
@@ -212,25 +231,25 @@
     window.panggilKeTV = function(key, nomor, divisi) {
       const itemDetail = dataMenunggu[key]; 
 
-      database.ref('antrean/aktif/' + divisi).set({
+      database.ref(`tenants/${tenantId}/antrean/aktif/${divisi}`).set({
         nomor: nomor,
         divisi: divisi,
         status: "CALLED",
         timestamp: Date.now()
       }).then(() => {
-        database.ref('antrean/riwayat').push({
+        database.ref(`tenants/${tenantId}/antrean/riwayat`).push({
           ...itemDetail,
           status: "selesai dipanggil",
           waktuPanggil: Date.now()
         });
 
-        database.ref('antrean/menunggu/' + key).remove();
+        database.ref(`tenants/${tenantId}/antrean/menunggu/${key}`).remove();
       }).catch((e) => console.error("Gagal memanggil:", e));
     };
 
     // --- DOWNLOAD EXCEL ---
     window.downloadLaporanExcel = function() {
-      database.ref('antrean').once('value').then((snapshot) => {
+      database.ref(`tenants/${tenantId}/antrean`).once('value').then((snapshot) => {
         const data = snapshot.val();
         if (!data || (!data.menunggu && !data.riwayat)) {
           alert("Tidak ada data antrean untuk diunduh!");
@@ -266,7 +285,7 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", "Rekap_Antrean_Lengkap.csv"); 
+        link.setAttribute("download", `Rekap_Antrean_${tenantId}.csv`); 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -279,7 +298,7 @@
 
     function bukaPengaturan() {
       document.getElementById('modalPengaturan').style.display = 'flex';
-      database.ref('pengaturan').once('value').then((snapshot) => {
+      database.ref(`tenants/${tenantId}/pengaturan`).once('value').then((snapshot) => {
         const data = snapshot.val();
         if (data) {
           document.getElementById('setLoket').value = data.loket || 'UMUM';
@@ -307,41 +326,11 @@
         return;
       }
 
-
-      // Fungsi untuk mengambil ID Toko/Tenant yang aktif
-function getTenantId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let tenant = urlParams.get('tenant');
-  
-  if (tenant) {
-    // Simpan ke memory browser agar tidak hilang
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-    return tenant.toLowerCase().trim();
-  }
-  
-  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
-  tenant = localStorage.getItem('qantri_tenant');
-  
-  if (!tenant) {
-    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
-    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
-    if (!tenant) tenant = "demo";
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-  }
-  
-  return tenant;
-}
-
-// Inisialisasi variabel tenantId di awal script
-const tenantId = getTenantId();
-console.log("Sistem berjalan untuk Tenant:", tenantId);
-
-      // Ambil PIN lama jika input kosong, atau gunakan default "1234" jika belum pernah diset
-      database.ref('pengaturan').once('value').then((snapshot) => {
+      database.ref(`tenants/${tenantId}/pengaturan`).once('value').then((snapshot) => {
         const existingData = snapshot.val() || {};
         const finalPin = pinInputVal !== "" ? pinInputVal : (existingData.pin || "1234");
 
-        database.ref('pengaturan').set({
+        database.ref(`tenants/${tenantId}/pengaturan`).set({
           loket: loket,
           instansi: instansi,
           ticker: ticker,

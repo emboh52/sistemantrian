@@ -2,8 +2,14 @@
 <html lang="id">
 <head>
   <base target="_top">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QAntri - Hub Antrean Digital</title>
+  
+  <!-- Firebase SDK v8 Compat (Diselaraskan dengan file register, display, & dashboard) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -23,7 +29,27 @@
       text-align: center;
     }
     h1 { color: #66fcf1; margin-bottom: 5px; font-size: 24px; letter-spacing: 2px; }
-    p { color: #c5c6c7; font-size: 14px; margin-bottom: 30px; }
+    p { color: #c5c6c7; font-size: 14px; margin-bottom: 20px; }
+    
+    /* Indicator Tenant/Toko Aktif */
+    .tenant-badge {
+      background: rgba(102, 252, 241, 0.1);
+      border: 1px solid #66fcf1;
+      color: #66fcf1;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 25px;
+    }
+    .btn-change-tenant {
+      color: #fdcb6e;
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 12px;
+      margin-left: 8px;
+    }
     
     .menu-btn {
       display: block; width: 100%;
@@ -51,8 +77,14 @@
   <div class="hub-container">
     <h1>QAntri</h1>
     <p>Antrean Digital untuk UMKM</p>
+
+    <!-- Label Indikator Toko & Tombol Ganti Toko -->
+    <div class="tenant-badge">
+      🏪 Toko: <span id="displayTenant">---</span>
+      <span class="btn-change-tenant" onclick="gantiTenant()">(Ganti)</span>
+    </div>
     
-    <!-- Tombol diarahkan langsung ke file HTML di Vercel -->
+    <!-- Tombol Navigasi Utama -->
     <button class="menu-btn btn-register" onclick="openPage('register')">📝 Halaman Ambil Antrean (Pelanggan)</button>
     <button class="menu-btn btn-display" onclick="openPage('display')">📺 Halaman Display TV (Ruang Tunggu)</button>
     <button class="menu-btn btn-dashboard" onclick="openPage('dashboard')">👨‍💻 Dashboard Petugas / Kasir</button>
@@ -60,10 +92,8 @@
     <div class="footer">UMKM Digital Solution &bull; Vibe Coding Project</div>
   </div>
 
-  <!-- Inisialisasi Firebase menggunakan Firebase v10 SDK Modular via CDN -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-
+  <script>
+    // 1. Konfigurasi Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
       authDomain: "qantri-app.firebaseapp.com",
@@ -74,47 +104,46 @@
       appId: "1:687819838654:web:6a56ebb0d43ecf1fa4baef"
     };
 
-    // Inisialisasi Firebase
-    const app = initializeApp(firebaseConfig);
-    console.log("Firebase Berhasil Terhubung ke Hub!");
-  </script>
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
- <script>
-// Fungsi untuk mengambil ID Toko/Tenant yang aktif
-function getTenantId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let tenant = urlParams.get('tenant');
-  
-  if (tenant) {
-    // Simpan ke memory browser agar tidak hilang
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-    return tenant.toLowerCase().trim();
-  }
-  
-  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
-  tenant = localStorage.getItem('qantri_tenant');
-  
-  if (!tenant) {
-    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
-    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
-    if (!tenant) tenant = "demo";
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-  }
-  
-  return tenant;
-}
+    // 2. Fungsi Penangkap Tenant ID
+    function getTenantId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let tenant = urlParams.get('tenant');
+      
+      if (tenant) {
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+        return tenant.toLowerCase().trim();
+      }
+      
+      tenant = localStorage.getItem('qantri_tenant');
+      
+      if (!tenant) {
+        tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+        if (!tenant) tenant = "demo";
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+      }
+      
+      return tenant;
+    }
 
-// Inisialisasi variabel tenantId di awal script
-const tenantId = getTenantId();
-console.log("Sistem berjalan untuk Tenant:", tenantId);
+    let tenantId = getTenantId();
+    document.getElementById('displayTenant').innerText = tenantId;
 
+    // 3. Fungsi untuk Mengganti Tenant ID Langsung dari UI
+    function gantiTenant() {
+      const tenantBaru = prompt("Masukkan ID Toko / Usaha Baru:", tenantId);
+      if (tenantBaru && tenantBaru.trim() !== "") {
+        const cleanTenant = tenantBaru.toLowerCase().trim();
+        localStorage.setItem('qantri_tenant', cleanTenant);
+        window.location.href = `index.html?tenant=${cleanTenant}`;
+      }
+    }
 
-
-    // Fungsi navigasi untuk membuka halaman di tab baru
+    // 4. Fungsi Navigasi Membuka Halaman Baru dengan Parameter Tenant
     function openPage(pageName) {
-  // Buka halaman baru sambil membawa ID Tenant
-  window.open(pageName + ".html?tenant=" + tenantId, '_blank');
-}
+      window.open(`${pageName}.html?tenant=${tenantId}`, '_blank');
+    }
   </script>
 </body>
 </html>

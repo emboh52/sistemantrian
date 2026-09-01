@@ -1,159 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <base target="_top">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ambil Antrean</title>
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-  <script>
-    // Konfigurasi Firebase kamu
-    const firebaseConfig = {
-      apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
-      authDomain: "qantri-app.firebaseapp.com",
-      databaseURL: "https://qantri-app-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "qantri-app",
-      storageBucket: "qantri-app.firebasestorage.app",
-      messagingSenderId: "687819838654",
-      appId: "1:687819838654:web:6a56ebb0d43ecf1fa4baef"
-    };
-
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-
-    // Pantau pengaturan loket untuk mencetak tombol secara dinamis
-    database.ref('pengaturan').on('value', (snapshot) => {
-      const p = snapshot.val();
-      let loketArr = ['UMUM'];
-      if (p && p.loket) {
-        loketArr = p.loket.split(',').map(s => s.trim().toUpperCase());
-      }
-
-      const container = document.getElementById('dynamicButtons');
-      container.innerHTML = '';
-
-      loketArr.forEach((loket, index) => {
-        const prefix = String.fromCharCode(65 + index); // 0=A, 1=B, dst
-        container.innerHTML += `
-          <button class="btn-submit" onclick="ambilAntrean('${loket}', '${prefix}')">
-            AMBIL ANTREAN ${loket} (${prefix})
-          </button>
-        `;
-      });
-    });
-
-    function ambilAntrean(divisi, prefix) {
-      const name = document.getElementById('customerName').value.trim();
-      const phone = document.getElementById('customerPhone').value.trim();
-      const address = document.getElementById('customerAddress').value.trim();
-
-      if (!name || !phone || !address) {
-        alert("Semua kolom (Nama, No HP, Alamat) wajib diisi!");
-        return;
-      }
-
-      // 1. Dapatkan format tanggal hari ini (contoh: 2026-08-22)
-      // Tujuannya agar nomor antrean otomatis reset mulai dari 1 setiap beda hari
-      const d = new Date();
-      const today = d.getFullYear() + "-" + 
-                    String(d.getMonth() + 1).padStart(2, '0') + "-" + 
-                    String(d.getDate()).padStart(2, '0');
-
-      // 2. Tentukan lokasi counter di Firebase (contoh: counters/2026-08-22/A)
-const counterRef = database.ref(`tenants/${tenantId}/counters/${today}/${prefix}`);
-      // Ubah tombol jadi loading
-      const buttons = document.querySelectorAll('.btn-submit');
-      buttons.forEach(btn => btn.disabled = true);
-      document.getElementById('dynamicButtons').style.opacity = '0.5';
-
-      // 3. Gunakan Firebase Transaction agar nomor tidak bentrok/ganda
-      counterRef.transaction((currentValue) => {
-        // Jika belum ada antrean hari ini, mulai dari 1. Jika sudah, tambah 1.
-        return (currentValue || 0) + 1;
-      }, (error, committed, snapshot) => {
-        if (error) {
-          alert("Sistem sibuk, gagal mengambil nomor. Silakan coba lagi.");
-          resetLoading(buttons);
-          return;
-        }
-
-        if (committed) {
-          // 4. Ambil nomor hasil transaction dan format jadi 3 digit (contoh: 1 -> 001)
-          const nextNumber = snapshot.val();
-          const formattedNumber = String(nextNumber).padStart(3, '0');
-          const nomorAntrean = prefix + '-' + formattedNumber; // Hasil: A-001
-
-          // 5. Susun data pelanggan untuk disimpan ke tabel utama antrean
-          let dataAntrean = {
-            nomor: nomorAntrean,
-            divisi: divisi,
-            nama: name,
-            phone: phone,
-            address: address,
-            status: "menunggu",
-            tanggal: today, // Tambahkan informasi tanggal
-            timestamp: Date.now()
-          };
-
-          // 6. Push data ke folder 'antrean/menunggu'
-          database.ref(`tenants/${tenantId}/antrean/menunggu`).push(dataAntrean).then(() => {
-            document.getElementById('formBox').style.display = 'none';
-            document.getElementById('resultBox').style.display = 'block';
-            document.getElementById('displayTicketNum').innerText = nomorAntrean;
-            document.getElementById('displayLoketTujuan').innerText = "Tujuan: " + divisi;
-            
-            document.getElementById('customerName').value = '';
-            document.getElementById('customerPhone').value = '';
-            document.getElementById('customerAddress').value = '';
-            resetLoading(buttons);
-          }).catch((e) => {
-            alert("Gagal menyimpan data antrean.");
-            resetLoading(buttons);
-          });
-        }
-      });
-    }
-
-    // Fungsi untuk mengambil ID Toko/Tenant yang aktif
-function getTenantId() {
-  const urlParams = new URLSearchParams(window.location.search);
-  let tenant = urlParams.get('tenant');
-  
-  if (tenant) {
-    // Simpan ke memory browser agar tidak hilang
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-    return tenant.toLowerCase().trim();
-  }
-  
-  // Ambil dari penyimpanan lokal jika URL tidak membawa parameter
-  tenant = localStorage.getItem('qantri_tenant');
-  
-  if (!tenant) {
-    // Jika baru pertama dibuka & tidak ada parameter, minta input ID Toko
-    tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
-    if (!tenant) tenant = "demo";
-    localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
-  }
-  
-  return tenant;
-}
-
-// Inisialisasi variabel tenantId di awal script
-const tenantId = getTenantId();
-console.log("Sistem berjalan untuk Tenant:", tenantId);
-
-    // Fungsi kecil untuk memulihkan tombol setelah proses selesai/gagal
-    function resetLoading(buttons) {
-      buttons.forEach(btn => btn.disabled = false);
-      document.getElementById('dynamicButtons').style.opacity = '1';
-    }
-
-    function resetForm() {
-      document.getElementById('resultBox').style.display = 'none';
-      document.getElementById('formBox').style.display = 'block';
-    }
-  </script>
 
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0984e3, #6c5ce7); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
@@ -169,7 +24,17 @@ console.log("Sistem berjalan untuk Tenant:", tenantId);
     .btn-submit:disabled { background-color: #b2bec3; cursor: not-allowed; }
     #resultBox { display: none; }
     .ticket-number { font-size: 64px; font-weight: bold; color: #0984e3; margin: 10px 0; }
-    .btn-reset { background-color: #636e72; margin-top: 15px; width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .btn-print { background-color: #00b894; margin-top: 15px; width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-print:hover { background-color: #55efc4; color: #2d3436; }
+    .btn-reset { background-color: #636e72; margin-top: 10px; width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+    /* CSS Khusus Cetak Struk / PDF */
+    @media print {
+      body * { visibility: hidden; }
+      #resultBox, #resultBox * { visibility: visible; }
+      #resultBox { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border: none !important; background: white !important; color: black !important; }
+      .btn-print, .btn-reset { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -191,8 +56,145 @@ console.log("Sistem berjalan untuk Tenant:", tenantId);
       <div class="ticket-number" id="displayTicketNum">---</div>
       <p id="displayLoketTujuan" style="font-weight: bold; color: #333; font-size: 18px;"></p>
       <p>Silakan perhatikan layar TV pemanggil di ruang tunggu.</p>
+      <button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan Tiket (PDF)</button>
       <button class="btn-reset" onclick="resetForm()">Selesai (Ambil Baru)</button>
     </div>
   </div>
+
+  <script>
+    // 1. Konfigurasi Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_RYgZg2u7TeLyVfgI9SuhiQs1BKz6tM8",
+      authDomain: "qantri-app.firebaseapp.com",
+      databaseURL: "https://qantri-app-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "qantri-app",
+      storageBucket: "qantri-app.firebasestorage.app",
+      messagingSenderId: "687819838654",
+      appId: "1:687819838654:web:6a56ebb0d43ecf1fa4baef"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // 2. Deklarasi Fungsi getTenantId() & tenantId di Awal Script
+    function getTenantId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let tenant = urlParams.get('tenant');
+      
+      if (tenant) {
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+        return tenant.toLowerCase().trim();
+      }
+      
+      tenant = localStorage.getItem('qantri_tenant');
+      
+      if (!tenant) {
+        tenant = prompt("Masukkan ID Toko / Usaha Anda (Contoh: toko-budi):", "demo");
+        if (!tenant) tenant = "demo";
+        localStorage.setItem('qantri_tenant', tenant.toLowerCase().trim());
+      }
+      
+      return tenant;
+    }
+
+    const tenantId = getTenantId();
+    console.log("Sistem berjalan untuk Tenant:", tenantId);
+
+    // 3. Pantau pengaturan loket berdasarkan tenant
+    database.ref(`tenants/${tenantId}/pengaturan`).on('value', (snapshot) => {
+      const p = snapshot.val();
+      let loketArr = ['UMUM'];
+      if (p && p.loket) {
+        loketArr = p.loket.split(',').map(s => s.trim().toUpperCase());
+      }
+
+      const container = document.getElementById('dynamicButtons');
+      container.innerHTML = '';
+
+      loketArr.forEach((loket, index) => {
+        const prefix = String.fromCharCode(65 + index); // 0=A, 1=B, dst
+        container.innerHTML += `
+          <button class="btn-submit" onclick="ambilAntrean('${loket}', '${prefix}')">
+            AMBIL ANTREAN ${loket} (${prefix})
+          </button>
+        `;
+      });
+    });
+
+    // 4. Fungsi Ambil Antrean
+    function ambilAntrean(divisi, prefix) {
+      const name = document.getElementById('customerName').value.trim();
+      const phone = document.getElementById('customerPhone').value.trim();
+      const address = document.getElementById('customerAddress').value.trim();
+
+      if (!name || !phone || !address) {
+        alert("Semua kolom (Nama, No HP, Alamat) wajib diisi!");
+        return;
+      }
+
+      const d = new Date();
+      const today = d.getFullYear() + "-" + 
+                    String(d.getMonth() + 1).padStart(2, '0') + "-" + 
+                    String(d.getDate()).padStart(2, '0');
+
+      const counterRef = database.ref(`tenants/${tenantId}/counters/${today}/${prefix}`);
+      
+      const buttons = document.querySelectorAll('.btn-submit');
+      buttons.forEach(btn => btn.disabled = true);
+      document.getElementById('dynamicButtons').style.opacity = '0.5';
+
+      counterRef.transaction((currentValue) => {
+        return (currentValue || 0) + 1;
+      }, (error, committed, snapshot) => {
+        if (error) {
+          alert("Sistem sibuk, gagal mengambil nomor. Silakan coba lagi.");
+          resetLoading(buttons);
+          return;
+        }
+
+        if (committed) {
+          const nextNumber = snapshot.val();
+          const formattedNumber = String(nextNumber).padStart(3, '0');
+          const nomorAntrean = prefix + '-' + formattedNumber;
+
+          let dataAntrean = {
+            nomor: nomorAntrean,
+            divisi: divisi,
+            nama: name,
+            phone: phone,
+            address: address,
+            status: "menunggu",
+            tanggal: today,
+            timestamp: Date.now()
+          };
+
+          database.ref(`tenants/${tenantId}/antrean/menunggu`).push(dataAntrean).then(() => {
+            document.getElementById('formBox').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'block';
+            document.getElementById('displayTicketNum').innerText = nomorAntrean;
+            document.getElementById('displayLoketTujuan').innerText = "Tujuan: " + divisi;
+            
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerAddress').value = '';
+            resetLoading(buttons);
+          }).catch((e) => {
+            alert("Gagal menyimpan data antrean.");
+            resetLoading(buttons);
+          });
+        }
+      });
+    }
+
+    function resetLoading(buttons) {
+      buttons.forEach(btn => btn.disabled = false);
+      document.getElementById('dynamicButtons').style.opacity = '1';
+    }
+
+    function resetForm() {
+      document.getElementById('resultBox').style.display = 'none';
+      document.getElementById('formBox').style.display = 'block';
+    }
+  </script>
 </body>
 </html>
