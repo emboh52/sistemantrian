@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qantri-pwa-v2'; // Naikkan versi agar browser memperbarui cache
+const CACHE_NAME = 'qantri-pwa-v3';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -14,9 +14,30 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // Mengunduh tiap file secara independen agar 1 file 404 tidak menggagalkan seluruh PWA
+      return Promise.allSettled(
+        ASSETS_TO_CACHE.map(url => 
+          cache.add(url).catch(err => console.warn('File belum ditemukan saat caching:', url))
+        )
+      );
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
