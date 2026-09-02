@@ -4,7 +4,13 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- PWA Config -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0984e3">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3652/3652191.png">
   <title>TV Display Antrean</title>
+
+
   <style>
     /* RESET & LAYOUT UTAMA */
     body { 
@@ -280,6 +286,14 @@
             document.getElementById('tvCounter').innerText = "MENUNGGU PANGGILAN";
             bottomRow.innerHTML = '<div style="color:#666; margin:auto; font-size:20px;">Belum ada loket yang melayani</div>';
         }
+
+        if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker PWA Aktif:', reg.scope))
+        .catch(err => console.error('Gagal registrasi PWA:', err));
+    });
+  }
       });
     };
   </script>

@@ -8,6 +8,11 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <!-- PWA Config -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0984e3">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3652/3652191.png">
+
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #334155; }
     .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; flex-wrap: wrap; gap: 15px;}
@@ -41,6 +46,8 @@
     .login-card input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 18px; letter-spacing: 4px; }
     .login-card button { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     .login-card button:hover { background: #2563eb; }
+
+    
   </style>
 </head>
 <body>
@@ -342,6 +349,16 @@
         }).catch((e) => alert("Gagal menyimpan: " + e.message));
       });
     }
+
+    
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker PWA Aktif:', reg.scope))
+        .catch(err => console.error('Gagal registrasi PWA:', err));
+    });
+  }
+
   </script>
 </body>
 </html>
