@@ -1,11 +1,14 @@
-const CACHE_NAME = 'qantri-pwa-v1';
+const CACHE_NAME = 'qantri-pwa-v2'; // Naikkan versi agar browser memperbarui cache
+
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './register.html',
   './display.html',
   './dashboard.html',
-  './manifest.json'
+  './manifest.json',
+  './image/icon-192.png',
+  './image/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
