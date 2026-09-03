@@ -4,14 +4,12 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- PWA Config -->
-<!-- PWA Config & Icon Lokal -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0984e3">
-<link rel="icon" type="image/png" href="./image/icon-192.png">
-<link rel="apple-touch-icon" href="./image/icon-192.png">
+  <!-- PWA Config & Icon Lokal -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0984e3">
+  <link rel="icon" type="image/png" href="./image/icon-192.png">
+  <link rel="apple-touch-icon" href="./image/icon-192.png">
   <title>TV Display Antrean</title>
-
 
   <style>
     /* RESET & LAYOUT UTAMA */
@@ -48,7 +46,7 @@
       box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
     }
     .box-header { background: rgba(0,0,0,0.15); text-align: center; padding: 20px; font-size: 24px; font-weight: bold; }
-    .box-number { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 160px; font-weight: bold; line-height: 1; }
+    .box-number { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 140px; font-weight: bold; line-height: 1; }
     .box-footer { background: rgba(0,0,0,0.15); text-align: center; padding: 20px; font-size: 28px; font-weight: bold; }
 
     .video-box { 
@@ -66,7 +64,7 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .card-header { background: rgba(0,0,0,0.15); text-align: center; padding: 15px; font-size: 16px; font-weight: bold; text-transform: uppercase; }
-    .card-number { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 70px; font-weight: bold; }
+    .card-number { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 60px; font-weight: bold; }
 
     .footer-ticker {
       background-color: #007bff; color: white; padding: 12px 20px; font-size: 22px; font-weight: bold;
@@ -138,7 +136,7 @@
     }
     const database = firebase.database();
 
-    // 3. FUNGSI TENANT ID (DILETAKKAN SEBELUM PEMANGGILAN DATABASE)
+    // 3. FUNGSI TENANT ID
     function getTenantId() {
       const urlParams = new URLSearchParams(window.location.search);
       let tenant = urlParams.get('tenant');
@@ -161,8 +159,6 @@
 
     const tenantId = getTenantId();
     console.log("Sistem berjalan untuk Tenant:", tenantId);
-
-    let lastCalledTime = 0;
 
     // 4. FUNGSI AUDIO & SUARA PANGGILAN
     function formatSpelling(queueNumber) {
@@ -232,72 +228,70 @@
       }
     });
 
-    // 6. PANTAU ANTREAN AKTIF REAL-TIME
-    window.onload = function() {
-      database.ref(`tenants/${tenantId}/antrean/aktif`).on('value', (snapshot) => {
-        const data = snapshot.val();
-        const bottomRow = document.getElementById('bottomRowCards');
-        bottomRow.innerHTML = '';
+    // 6. PANTAU PANGGILAN UTAMA & RECALL REAL-TIME (`currentCall`)
+    let lastTimestamp = 0;
+    database.ref(`tenants/${tenantId}/currentCall`).on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
 
-        if (data) {
-          let latestCall = null;
-          let latestTimestamp = 0;
-          const colors = ['#a855f7', '#22c55e', '#ef4444', '#0ea5e9', '#f97316'];
-          let colorIndex = 0;
+      const nomor = data.nomor || '---';
+      const loketRaw = data.loket || data.divisi || 'Loket';
+      const timestamp = data.timestamp || Date.now();
 
-          for (let key in data) {
-            let item = data[key];
-            let namaDivisi = item.divisi === 'CS' ? 'Customer Service' : (item.divisi === 'KASIR' ? 'Kasir' : item.divisi);
+      let textDivisi = loketRaw === 'CS' ? 'Customer Service' : (loketRaw === 'KASIR' ? 'Kasir' : loketRaw);
 
-            if (item.timestamp > latestTimestamp) {
-              latestTimestamp = item.timestamp;
-              latestCall = item;
-            }
+      // Update Tampilan Kotak Besar
+      document.getElementById('tvNumber').innerText = nomor;
+      document.getElementById('tvCounter').innerText = textDivisi;
 
-            let bgColor = colors[colorIndex % colors.length];
-            bottomRow.innerHTML += `
-              <div class="counter-card" style="background-color: ${bgColor};">
-                <div class="card-header">${namaDivisi}</div>
-                <div class="card-number">${item.nomor}</div>
-              </div>
-            `;
-            colorIndex++;
-          }
+      triggerFlash(document.getElementById('tvNumber'));
 
-          if (latestCall && latestTimestamp > lastCalledTime) {
-            lastCalledTime = latestTimestamp;
-            let textDivisi = latestCall.divisi === 'CS' ? 'Customer Service' : (latestCall.divisi === 'KASIR' ? 'Kasir' : latestCall.divisi);
-            
-            document.getElementById('tvNumber').innerText = latestCall.nomor;
-            document.getElementById('tvCounter').innerText = textDivisi;
-
-            triggerFlash(document.getElementById('tvNumber'));
-            playChime();
-            
-            setTimeout(() => {
-              speakQueue(latestCall.nomor, textDivisi);
-            }, 1200);
-          } 
-          else if (latestCall && latestTimestamp === lastCalledTime) {
-            let textDivisi = latestCall.divisi === 'CS' ? 'Customer Service' : (latestCall.divisi === 'KASIR' ? 'Kasir' : latestCall.divisi);
-            document.getElementById('tvNumber').innerText = latestCall.nomor;
-            document.getElementById('tvCounter').innerText = textDivisi;
-          }
-        } else {
-            document.getElementById('tvNumber').innerText = "---";
-            document.getElementById('tvCounter').innerText = "MENUNGGU PANGGILAN";
-            bottomRow.innerHTML = '<div style="color:#666; margin:auto; font-size:20px;">Belum ada loket yang melayani</div>';
-        }
-
-        if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker PWA Aktif:', reg.scope))
-        .catch(err => console.error('Gagal registrasi PWA:', err));
+      // Jalankan suara dan chime setiap ada panggilan baru ATAU tombol panggil ulang (recall) diklik
+      if (timestamp !== lastTimestamp) {
+        lastTimestamp = timestamp;
+        playChime();
+        setTimeout(() => {
+          speakQueue(nomor, textDivisi);
+        }, 1200);
+      }
     });
-  }
+
+    // 7. PANTAU DAFTAR LOKET AKTIF DI BAWAH (`antrean/aktif`)
+    database.ref(`tenants/${tenantId}/antrean/aktif`).on('value', (snapshot) => {
+      const data = snapshot.val();
+      const bottomRow = document.getElementById('bottomRowCards');
+      bottomRow.innerHTML = '';
+
+      if (data) {
+        const colors = ['#a855f7', '#22c55e', '#ef4444', '#0ea5e9', '#f97316'];
+        let colorIndex = 0;
+
+        for (let key in data) {
+          let item = data[key];
+          let namaDivisi = item.divisi === 'CS' ? 'Customer Service' : (item.divisi === 'KASIR' ? 'Kasir' : item.divisi);
+
+          let bgColor = colors[colorIndex % colors.length];
+          bottomRow.innerHTML += `
+            <div class="counter-card" style="background-color: ${bgColor};">
+              <div class="card-header">${namaDivisi}</div>
+              <div class="card-number">${item.nomor}</div>
+            </div>
+          `;
+          colorIndex++;
+        }
+      } else {
+        bottomRow.innerHTML = '<div style="color:#fff; margin:auto; font-size:20px;">Belum ada loket yang melayani</div>';
+      }
+    });
+
+    // 8. REGISTRASI SERVICE WORKER PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker PWA Aktif:', reg.scope))
+          .catch(err => console.error('Gagal registrasi PWA:', err));
       });
-    };
+    }
   </script>
 </body>
 </html>
